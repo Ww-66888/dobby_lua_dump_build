@@ -4,14 +4,16 @@ project(lua_dump C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Dobby is cloned by workflow into ./Dobby
-add_subdirectory(${CMAKE_SOURCE_DIR}/Dobby EXCLUDE_FROM_ALL)
+# Dobby is expected to be prebuilt at DOBBY_PREFIX/include and DOBBY_PREFIX/lib
+set(DOBBY_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/Dobby" CACHE PATH "Path to Dobby build")
 
-# ---- Our library ----
+# Our library
 add_library(dump_lua SHARED src/dump_lua.c)
 target_include_directories(dump_lua PRIVATE
-  ${CMAKE_SOURCE_DIR}/Dobby/include
-  ${CMAKE_BINARY_DIR}/Dobby  # for config.h
+  ${DOBBY_PREFIX}/include
+)
+target_link_directories(dump_lua PRIVATE
+  ${DOBBY_PREFIX}/lib
 )
 target_link_libraries(dump_lua PRIVATE
   dobby

@@ -24,34 +24,56 @@ jobs:
       - name: Install NDK
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
-          echo "NDK 27 installed"
+          echo "NDK installed"
+          ls $ANDROID_HOME/ndk/
 
       - name: Clone Dobby
         run: |
           git clone --depth 1 https://github.com/jmpews/Dobby.git
-          echo "Dobby cloned ($(ls Dobby/ | wc -l) files)"
-          ls Dobby/include/ | head -5
+          ls Dobby/include/ | head -10
 
-      - name: Configure CMake
+      - name: Build Dobby (static lib for arm64-v8a)
+        run: |
+          cmake -B dobby-build \
+            -S Dobby \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDOBBY_BUILD_SHARED=OFF \
+            2>&1 | tail -20
+          echo "=== Dobby configure exit: $? ==="
+          cmake --build dobby-build --config Release 2>&1 | tail -30
+          echo "=== Dobby build exit: $? ==="
+          echo "=== Dobby artifacts ==="
+          find dobby-build -name "*.a" -o -name "*.so" 2>/dev/null | head -10
+
+      - name: Prepare Dobby libs
+        run: |
+          # Copy headers + static libs into Dobby/ for our CMakeLists
+          mkdir -p Dobby/lib
+          find dobby-build -name "*.a" -exec cp {} Dobby/lib/ \;
+          cp -r Dobby/include/* Dobby/include/ 2>/dev/null
+          echo "=== Dobby/lib ==="
+          ls -la Dobby/lib/
+          echo "=== include ==="
+          ls Dobby/include/ | head -10
+
+      - name: Configure our CMake
         run: |
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DDOBBY_BUILD_SHARED=OFF \
-            -DDOBBY_DEBUG=OFF \
-            -DDOBBY_ANDROID=ON \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            2>&1
+            2>&1 | tail -15
 
-      - name: Build
+      - name: Build our lib
         run: |
-          cmake --build build --config Release 2>&1
-          echo "=== Build exit code: $? ==="
-          echo "=== Checking output ==="
-          find build -name "*.so" -o -name "*.a" 2>/dev/null | head -20
-          find build -name "libdump*" 2>/dev/null | head -10
+          cmake --build build --config Release 2>&1 | tail -30
+          echo "=== Our build exit: $? ==="
+          echo "=== Output ==="
+          find build -name "libdump*" 2>/dev/null | head -5
 
       - name: Package
         run: |
@@ -59,13 +81,12 @@ jobs:
           SO=$(find build -name "libdump.so" 2>/dev/null | head -1)
           if [ -n "$SO" ]; then
             cp "$SO" output/lib/arm64-v8a/
-            echo "Copied $SO"
+            echo "Copied: $SO"
+            file output/lib/arm64-v8a/libdump.so
           else
-            echo "WARNING: libdump.so not found!"
-            find build -name "*.so" 2>/dev/null
+            echo "ERROR: libdump.so not found!"
+            find build -type f 2>/dev/null | head -20
           fi
-          echo "Package structure:"
-          find output -type f
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
