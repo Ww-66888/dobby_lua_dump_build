@@ -34,11 +34,26 @@ jobs:
           ls Dobby/external/ 2>/dev/null
           echo "=== Patching @PAGE/@PAGEOFF in asm files ==="
           grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
-          # .asm files skip C preprocessor, so cdecl() macro stays literal -> strip it (identity on Linux)
-          # then: symbol@PAGE -> :pg_hi21:symbol, symbol@PAGEOFF -> :lo12:symbol (PAGEOFF first, PAGE with \b)
-          find Dobby -name "*.asm" -exec sed -i -E 's/cdecl\(([^)]*)\)/\1/g; s/([A-Za-z_][A-Za-z0-9_]*)@PAGEOFF/:lo12:\1/g; s/([A-Za-z_][A-Za-z0-9_]*)@PAGE\b/:pg_hi21:\1/g' {} +
+          echo "=== Patching asm for NDK clang (ldr-based, avoids relocation specifiers) ==="
+          grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
+          python3 - <<'PYEOF'
+import re, glob
+for f in glob.glob('Dobby/**/*.asm', recursive=True):
+    s = open(f).read()
+    orig = s
+    # Replace adrp/add @PAGE/@PAGEOFF pair with a single PC-relative literal load
+    s = re.sub(r'adrp\s+TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGE\s*\n',
+               'ldr TMP_REG_0, common_closure_bridge_handler_addr\n', s)
+    s = re.sub(r'add\s+TMP_REG_0,\s*TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGEOFF\s*\n',
+               '', s)
+    # Strip cdecl() macro (identity on Linux)
+    s = re.sub(r'cdecl\(([^)]*)\)', r'\1', s)
+    if s != orig:
+        open(f, 'w').write(s)
+        print('patched:', f)
+PYEOF
           echo "=== After patch ==="
-          grep -n "pg_hi21\|lo12\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm
+          grep -n "adrp\|ldr TMP_REG_0\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm
           echo "=== After patch ==="
           grep -n "pg_hi21\|lo12\|@PAGE\|@PAGEOFF" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/*.asm
 
