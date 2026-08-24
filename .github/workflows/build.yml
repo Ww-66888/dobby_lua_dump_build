@@ -38,7 +38,7 @@ jobs:
           grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
           python3 scripts/patch_dobby.py
           echo "=== After patch ==="
-          grep -n "adrp\|ldr TMP_REG_0\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm
+          grep -n "adrp\|ldr TMP_REG_0\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm || true
           echo "=== After patch ==="
           grep -n "pg_hi21\|lo12\|@PAGE\|@PAGEOFF" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/*.asm
 
