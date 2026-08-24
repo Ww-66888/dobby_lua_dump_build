@@ -26,12 +26,17 @@ jobs:
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
           echo "NDK installed"
 
-      - name: Clone Dobby (chiteroman fork, fixes arm64 asm)
+      - name: Clone Dobby (official + patch asm for NDK)
         run: |
-          git clone --depth 1 --recursive https://github.com/chiteroman/Dobby.git
+          git clone --depth 1 --recursive https://github.com/jmpews/Dobby.git
           echo "=== Dobby dirs ==="
           ls Dobby/
           ls Dobby/external/ 2>/dev/null
+          echo "=== Patching @PAGE/@PAGEOFF in asm files ==="
+          grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
+          find Dobby -name "*.asm" -exec sed -i 's/@PAGE/:pg_hi21:/g; s/@PAGEOFF/:lo12:/g' {} +
+          echo "=== After patch ==="
+          grep -n "pg_hi21\|lo12" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm | head
 
       - name: Build Dobby static lib
         run: |
