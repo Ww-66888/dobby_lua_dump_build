@@ -25,14 +25,15 @@ jobs:
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
           echo "NDK installed"
-          ls $ANDROID_HOME/ndk/
 
-      - name: Clone Dobby
+      - name: Clone Dobby (with submodules)
         run: |
-          git clone --depth 1 https://github.com/jmpews/Dobby.git
-          ls Dobby/include/ | head -10
+          git clone --depth 1 --recursive https://github.com/jmpews/Dobby.git
+          echo "=== Dobby dirs ==="
+          ls Dobby/
+          ls Dobby/external/ 2>/dev/null
 
-      - name: Build Dobby (static lib for arm64-v8a)
+      - name: Build Dobby static lib
         run: |
           cmake -B dobby-build \
             -S Dobby \
@@ -40,55 +41,57 @@ jobs:
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DDOBBY_BUILD_SHARED=OFF \
-            2>&1 | tail -20
-          echo "=== Dobby configure exit: $? ==="
-          cmake --build dobby-build --config Release 2>&1 | tail -30
-          echo "=== Dobby build exit: $? ==="
-          echo "=== Dobby artifacts ==="
-          find dobby-build -name "*.a" -o -name "*.so" 2>/dev/null | head -10
+            > dobby_config.log 2>&1 || true
+          echo "=== dobby config tail ==="
+          tail -30 dobby_config.log
+          cmake --build dobby-build --config Release > dobby_build.log 2>&1 || true
+          echo "=== dobby build tail ==="
+          tail -40 dobby_build.log
+          echo "=== dobby artifacts ==="
+          find dobby-build -name "*.a" -o -name "*.so" 2>/dev/null | head
 
-      - name: Prepare Dobby libs
+      - name: Prepare Dobby lib
         run: |
-          # Copy headers + static libs into Dobby/ for our CMakeLists
           mkdir -p Dobby/lib
-          find dobby-build -name "*.a" -exec cp {} Dobby/lib/ \;
-          cp -r Dobby/include/* Dobby/include/ 2>/dev/null
-          echo "=== Dobby/lib ==="
+          find dobby-build -name "libdobby.a" -exec cp {} Dobby/lib/ \;
           ls -la Dobby/lib/
-          echo "=== include ==="
-          ls Dobby/include/ | head -10
 
-      - name: Configure our CMake
+      - name: Configure our lib
         run: |
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            2>&1 | tail -15
+            > our_config.log 2>&1 || true
+          echo "=== our config tail ==="
+          tail -30 our_config.log
 
       - name: Build our lib
         run: |
-          cmake --build build --config Release 2>&1 | tail -30
-          echo "=== Our build exit: $? ==="
-          echo "=== Output ==="
-          find build -name "libdump*" 2>/dev/null | head -5
+          cmake --build build --config Release > our_build.log 2>&1 || true
+          echo "=== our build tail ==="
+          tail -40 our_build.log
+          echo "=== outputs ==="
+          find build -name "libdump*" 2>/dev/null | head
 
-      - name: Package
+      - name: Package (always)
+        if: always()
         run: |
-          mkdir -p output/lib/arm64-v8a
+          mkdir -p output/lib/arm64-v8a output/log
           SO=$(find build -name "libdump.so" 2>/dev/null | head -1)
           if [ -n "$SO" ]; then
             cp "$SO" output/lib/arm64-v8a/
             echo "Copied: $SO"
-            file output/lib/arm64-v8a/libdump.so
           else
-            echo "ERROR: libdump.so not found!"
-            find build -type f 2>/dev/null | head -20
+            echo "NO libdump.so produced" > output/log/error.txt
           fi
+          for f in dobby_config.log dobby_build.log our_config.log our_build.log; do
+            [ -f "$f" ] && cp "$f" output/log/ || true
+          done
 
       - name: Upload Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: libdump-arm64
