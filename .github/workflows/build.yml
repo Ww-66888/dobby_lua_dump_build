@@ -89,6 +89,12 @@ jobs:
           for f in dobby_config.log dobby_build.log our_config.log our_build.log; do
             [ -f "$f" ] && cp "$f" output/log/ || true
           done
+          # Emit key log tails as annotations for API inspection
+          echo "::error title=DOBBY_CONFIG::$(tail -5 dobby_config.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+          echo "::error title=DOBBY_BUILD::$(tail -8 dobby_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+          echo "::error title=OUR_CONFIG::$(tail -5 our_config.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+          echo "::error title=OUR_BUILD::$(tail -8 our_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+          echo "::error title=OUTPUTS::$(find build -name 'libdump*' 2>/dev/null | tr '\n' ' ')"
 
       - name: Upload Artifact
         if: always()
