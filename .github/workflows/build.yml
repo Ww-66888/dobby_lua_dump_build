@@ -34,9 +34,11 @@ jobs:
           ls Dobby/external/ 2>/dev/null
           echo "=== Patching @PAGE/@PAGEOFF in asm files ==="
           grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
-          # Correct ELF syntax: symbol@PAGE -> :pg_hi21:symbol, symbol@PAGEOFF -> :lo12:symbol
-          # Order matters: PAGEOFF first, then PAGE with word boundary (avoid matching PAGEOFF's PAGE part)
-          find Dobby -name "*.asm" -exec sed -i -E 's/([A-Za-z_][A-Za-z0-9_()]*)@PAGEOFF/:lo12:\1/g; s/([A-Za-z_][A-Za-z0-9_()]*)@PAGE\b/:pg_hi21:\1/g' {} +
+          # .asm files skip C preprocessor, so cdecl() macro stays literal -> strip it (identity on Linux)
+          # then: symbol@PAGE -> :pg_hi21:symbol, symbol@PAGEOFF -> :lo12:symbol (PAGEOFF first, PAGE with \b)
+          find Dobby -name "*.asm" -exec sed -i -E 's/cdecl\(([^)]*)\)/\1/g; s/([A-Za-z_][A-Za-z0-9_]*)@PAGEOFF/:lo12:\1/g; s/([A-Za-z_][A-Za-z0-9_]*)@PAGE\b/:pg_hi21:\1/g' {} +
+          echo "=== After patch ==="
+          grep -n "pg_hi21\|lo12\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm
           echo "=== After patch ==="
           grep -n "pg_hi21\|lo12\|@PAGE\|@PAGEOFF" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/*.asm
 
