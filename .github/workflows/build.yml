@@ -1,0 +1,59 @@
+name: Build Dobby Lua Dump
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java (for SDK manager)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
+          echo "NDK installed"
+
+      - name: Clone Dobby
+        run: |
+          git clone --depth 1 https://github.com/jmpews/Dobby.git
+          echo "Dobby cloned"
+
+      - name: Configure CMake (arm64-v8a)
+        run: |
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+          echo "Build done"
+          ls -la build/lib/
+
+      - name: Package
+        run: |
+          mkdir -p output/lib/arm64-v8a
+          cp build/lib/libdump.so output/lib/arm64-v8a/
+          echo "Package structure:"
+          find output -type f
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libdump-arm64
+          path: output/
