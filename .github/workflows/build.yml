@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java (for SDK manager)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -24,31 +24,46 @@ jobs:
       - name: Install NDK
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
-          echo "NDK installed"
+          echo "NDK 27 installed"
 
       - name: Clone Dobby
         run: |
           git clone --depth 1 https://github.com/jmpews/Dobby.git
-          echo "Dobby cloned"
+          echo "Dobby cloned ($(ls Dobby/ | wc -l) files)"
+          ls Dobby/include/ | head -5
 
-      - name: Configure CMake (arm64-v8a)
+      - name: Configure CMake
         run: |
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDOBBY_BUILD_SHARED=OFF \
+            -DDOBBY_DEBUG=OFF \
+            -DDOBBY_ANDROID=ON \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            2>&1
 
       - name: Build
         run: |
-          cmake --build build --config Release
-          echo "Build done"
-          ls -la build/lib/
+          cmake --build build --config Release 2>&1
+          echo "=== Build exit code: $? ==="
+          echo "=== Checking output ==="
+          find build -name "*.so" -o -name "*.a" 2>/dev/null | head -20
+          find build -name "libdump*" 2>/dev/null | head -10
 
       - name: Package
         run: |
           mkdir -p output/lib/arm64-v8a
-          cp build/lib/libdump.so output/lib/arm64-v8a/
+          SO=$(find build -name "libdump.so" 2>/dev/null | head -1)
+          if [ -n "$SO" ]; then
+            cp "$SO" output/lib/arm64-v8a/
+            echo "Copied $SO"
+          else
+            echo "WARNING: libdump.so not found!"
+            find build -name "*.so" 2>/dev/null
+          fi
           echo "Package structure:"
           find output -type f
 
