@@ -40,6 +40,9 @@ jobs:
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_C_FLAGS="-fPIC" \
+            -DCMAKE_CXX_FLAGS="-fPIC" \
             > dobby_config.log 2>&1 || true
           echo "=== dobby config tail ==="
           tail -30 dobby_config.log
@@ -106,3 +109,48 @@ jobs:
         with:
           name: libdump-arm64
           path: output/
+
+      - name: Publish diagnostics to ci-logs branch
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          def r(p):
+              try: return open(p).read()
+              except: return "(missing)"
+          def g(p, pat):
+              try:
+                  lines=[l for l in open(p).read().splitlines() if any(k in l for k in pat)]
+                  return "\n".join(lines[-60:])
+              except: return "(missing)"
+          try:
+              find = subprocess.run("find dobby-build -name 'libdobby*.a' -o -name 'libdobby*.so' 2>/dev/null", shell=True, capture_output=True, text=True).stdout.strip()
+          except Exception:
+              find = ""
+          out=[]
+          out.append("# CI diag run %s sha %s" % (os.environ.get('GITHUB_RUN_NUMBER','?'), os.environ.get('GITHUB_SHA','?')[:8]))
+          out.append("")
+          out.append("## dobby static lib present?"); out.append("```"); out.append(find or "(none)"); out.append("```")
+          out.append("")
+          out.append("## output/log/error.txt"); out.append("```"); out.append(r("output/log/error.txt")); out.append("```")
+          out.append("")
+          out.append("## our build log"); out.append("```"); out.append(r("our_build.log")); out.append("```")
+          out.append("")
+          out.append("## dobby build error lines"); out.append("```"); out.append(g("dobby_build.log",["error:","undefined reference","ld: ","fatal error"])); out.append("```")
+          out.append("")
+          out.append("## our config log (tail)"); out.append("```"); out.append("\n".join(r("our_config.log").splitlines()[-25:])); out.append("```")
+          out.append("")
+          out.append("## dobby config log (tail)"); out.append("```"); out.append("\n".join(r("dobby_config.log").splitlines()[-25:])); out.append("```")
+          open("/tmp/DIAG.md","w").write("\n".join(out))
+          print("DIAG written, bytes:", len("\n".join(out)))
+          PY
+          git config user.email "ci@local"
+          git config user.name "ci"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Ww-66888/dobby_lua_dump_build.git
+          git branch -D ci-logs 2>/dev/null || true
+          git switch --orphan ci-logs
+          cp /tmp/DIAG.md DIAG.md
+          git add DIAG.md
+          git commit -m "diag run ${{ github.run_number }}" || true
+          git push --force origin ci-logs
+          echo "pushed ci-logs"
