@@ -1,5 +1,8 @@
 name: Build Dobby Lua Dump
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ master ]
@@ -144,13 +147,10 @@ jobs:
           open("/tmp/DIAG.md","w").write("\n".join(out))
           print("DIAG written, bytes:", len("\n".join(out)))
           PY
-          git config user.email "ci@local"
-          git config user.name "ci"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Ww-66888/dobby_lua_dump_build.git
           git branch -D ci-logs 2>/dev/null || true
           git switch --orphan ci-logs
           cp /tmp/DIAG.md DIAG.md
           git add DIAG.md
-          git commit -m "diag run ${{ github.run_number }}" || true
-          git push --force origin ci-logs
-          echo "pushed ci-logs"
+          git -c user.email=ci@local -c user.name=ci commit -m "diag run ${{ github.run_number }}" || echo "commit failed"
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Ww-66888/dobby_lua_dump_build.git ci-logs 2>&1 | tail -5 || echo "PUSH_FAILED"
+          echo "publish step done"
