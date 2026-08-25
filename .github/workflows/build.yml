@@ -44,10 +44,13 @@ jobs:
           echo "=== dobby config tail ==="
           tail -30 dobby_config.log
           cmake --build dobby-build --config Release --target dobby_static > dobby_build.log 2>&1 || true
-          echo "=== dobby build tail ==="
-          tail -50 dobby_build.log
+          echo "=== dobby build: ERROR LINES (if any) ==="
+          grep -niE "error:|error [0-9]+|fatal error|undefined reference|ld: " dobby_build.log | head -60 || echo "NO ERROR LINES FOUND"
+          echo "=== dobby build tail (last 40 lines, full) ==="
+          tail -40 dobby_build.log
           echo "=== dobby static artifacts ==="
           find dobby-build -name "libdobby*.a" -o -name "libdobby*.so" | head
+          find dobby-build -name "libdobby*.a" -exec ls -la {} \;
 
       - name: Prepare Dobby lib
         run: |
@@ -71,8 +74,10 @@ jobs:
       - name: Build our lib
         run: |
           cmake --build build --config Release > our_build.log 2>&1 || true
-          echo "=== our build tail ==="
-          tail -50 our_build.log
+          echo "=== our build: ERROR LINES (if any) ==="
+          grep -niE "error:|error [0-9]+|fatal error|undefined reference|ld: " our_build.log | head -60 || echo "NO ERROR LINES FOUND"
+          echo "=== our build tail (last 40 lines, full) ==="
+          tail -40 our_build.log
           echo "=== outputs ==="
           find build -name "libdump*.so" | head
 
@@ -90,9 +95,8 @@ jobs:
           for f in dobby_config.log dobby_build.log our_config.log our_build.log; do
             [ -f "$f" ] && cp "$f" output/log/ || true
           done
-          echo "::error title=DOBBY_CONFIG::$(tail -20 dobby_config.log 2>/dev/null | tr '\n' ' ' | cut -c1-2000)"
-          echo "::error title=DOBBY_BUILD::$(tail -90 dobby_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-5000)"
-          echo "::error title=OUR_BUILD::$(tail -40 our_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-2000)"
+          echo "::error title=DOBBY_ERRORS::$(grep -niE 'error:|undefined reference|ld: ' dobby_build.log 2>/dev/null | tail -30 | tr '\n' ' ')"
+          echo "::error title=OUR_ERRORS::$(grep -niE 'error:|undefined reference|ld: ' our_build.log 2>/dev/null | tail -30 | tr '\n' ' ')"
           echo "::error title=OUTPUTS::$(find build -name 'libdump*' 2>/dev/null | tr '\n' ' ')"
 
       - name: Upload Artifact
