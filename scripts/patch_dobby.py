@@ -154,6 +154,21 @@ if os.path.exists(oaf):
     else:
         print('WARN: os_arch_features.h make_memory_readable body not matched; leaving as-is')
 
+# ---- 2f) Remove dead 'core/arch/Cpu.h' include (file does not exist on master) ----
+# Several Dobby sources include "core/arch/Cpu.h" which was removed/renamed on
+# master (only core/arch/CpuRegister.h + arch-specific headers remain). Replace
+# the include broadly so the NDK build stops failing on a missing header.
+for f in glob.glob('Dobby/**/*.cc', recursive=True) + glob.glob('Dobby/**/*.h', recursive=True):
+    try:
+        s = open(f, encoding='utf-8', errors='replace').read()
+    except Exception:
+        continue
+    if '#include "core/arch/Cpu.h"' in s:
+        s = s.replace('#include "core/arch/Cpu.h"', '#include "core/arch/CpuRegister.h"')
+        open(f, 'w', encoding='utf-8').write(s)
+        print('patched Cpu.h -> CpuRegister.h :', f)
+        patched.append(f)
+
 # ---- 3) Diagnostics: report any remaining Mach-O-style @ reloc specifiers ----
 leftover = []
 for f in glob.glob('Dobby/**/*.asm', recursive=True):
