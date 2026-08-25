@@ -150,20 +150,5 @@ jobs:
           open("/tmp/DIAG.md","w").write("\n".join(out))
           print("DIAG written, bytes:", len("\n".join(out)))
           PY
-          python3 - <<'PY2'
-          import json, os, urllib.request, ssl
-          tok = os.environ.get("GH_TOKEN","")
-          diag = open("/tmp/DIAG.md").read()
-          payload = json.dumps({"title": "CI diag run %s" % os.environ.get('GITHUB_RUN_NUMBER','?'), "body": diag}).encode()
-          req = urllib.request.Request(
-            "https://api.github.com/repos/Ww-66888/dobby_lua_dump_build/issues",
-            data=payload,
-            headers={"Authorization": "Bearer %s" % tok, "Accept":"application/vnd.github+json", "Content-Type":"application/json", "User-Agent":"wb"},
-            method="POST")
-          try:
-            resp = urllib.request.urlopen(req, timeout=60).read()
-            print("ISSUE_CREATED", json.loads(resp).get("html_url"))
-          except Exception as e:
-            print("ISSUE_FAIL", repr(e))
-          PY2
+          gh issue create --title "CI diag run ${{ github.run_number }}" --body-file /tmp/DIAG.md || echo "GH_ISSUE_FAIL"
           echo "publish step done"
