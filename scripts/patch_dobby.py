@@ -98,6 +98,62 @@ if os.path.exists(cal):
     else:
         print('OK: compiler_and_linker.cmake already has clang18 flags / anchor not found')
 
+# ---- 2d) Fix MemRange accessor-method drift in ProcessRuntime.cc ----
+# Dobby master turned MemRange::start/end into accessor METHODS (not fields), so
+# `a.start` (used in the region comparator) must be `a.start()`.
+prc = 'Dobby/source/Backend/UserMode/PlatformUtil/Linux/ProcessRuntime.cc'
+if os.path.exists(prc):
+    t = open(prc).read()
+    old = '  return (a.start < b.start);'
+    new = '  return (a.start() < b.start());'
+    if old in t:
+        t = t.replace(old, new)
+        open(prc, 'w').write(t)
+        print('patched ProcessRuntime.cc: a.start -> a.start() (method accessor)')
+        patched.append(prc)
+    else:
+        print('OK: ProcessRuntime.cc comparator already uses start()')
+
+# ---- 2e) De-depend make_memory_readable from OSMemory (include-order ghost) ----
+# common/os_arch_features.h's android::make_memory_readable references OSMemory/
+# kReadExecute which live in PlatformUnifiedInterface/platform.h. Depending on
+# include order in some TUs the symbol is not in scope, breaking the Android NDK
+# build. Replace the body with the underlying mprotect() call so it no longer
+# depends on OSMemory being visible here.
+oaf = 'Dobby/common/os_arch_features.h'
+if os.path.exists(oaf):
+    t = open(oaf).read()
+    old_body = ('namespace android {\n'
+               'inline void make_memory_readable(void *address, size_t size) {\n'
+               '#if defined(ANDROID)\n'
+               '  auto page = (void *)ALIGN_FLOOR(address, OSMemory::PageSize());\n'
+               '  if (!OSMemory::SetPermission(page, OSMemory::PageSize(), kReadExecute)) {\n'
+               '    return;\n'
+               '  }\n'
+               '#endif\n'
+               '}\n'
+               '} // namespace android\n')
+    new_body = ('namespace android {\n'
+               'inline void make_memory_readable(void *address, size_t size) {\n'
+               '#if defined(ANDROID)\n'
+               '  long ps = sysconf(_SC_PAGESIZE);\n'
+               '  if (ps <= 0) ps = 4096;\n'
+               '  auto page = (void *)ALIGN_FLOOR(address, (size_t)ps);\n'
+               '  mprotect(page, (size_t)ps, PROT_READ | PROT_WRITE | PROT_EXEC);\n'
+               '#endif\n'
+               '}\n'
+               '} // namespace android\n')
+    if old_body in t:
+        t = t.replace(old_body, new_body)
+        # ensure the POSIX headers we now use are present
+        if '#include <sys/mman.h>' not in t:
+            t = t.replace('#include <stddef.h>', '#include <stddef.h>\n#include <sys/mman.h>\n#include <unistd.h>', 1)
+        open(oaf, 'w').write(t)
+        print('patched os_arch_features.h: make_memory_readable now uses mprotect (no OSMemory dep)')
+        patched.append(oaf)
+    else:
+        print('WARN: os_arch_features.h make_memory_readable body not matched; leaving as-is')
+
 # ---- 3) Diagnostics: report any remaining Mach-O-style @ reloc specifiers ----
 leftover = []
 for f in glob.glob('Dobby/**/*.asm', recursive=True):
