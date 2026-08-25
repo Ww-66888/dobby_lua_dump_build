@@ -176,6 +176,21 @@ for f in glob.glob('Dobby/**/*.cc', recursive=True) + glob.glob('Dobby/**/*.h', 
         print('patched Cpu.h -> CpuRegister.h :', f)
         patched.append(f)
 
+# ---- 2g) Ensure Dobby assembly sources are compiled PIC ----
+# closure_bridge_arm64.asm references a C function via page-relative adrp/add
+# relocations; if the .o is not PIC the linker rejects it when building the
+# shared libdump.so ("relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used ...
+# recompile with -fPIC"). Force -fPIC on ASM sources.
+dcm = 'Dobby/CMakeLists.txt'
+if os.path.exists(dcm):
+    cs = open(dcm).read()
+    if 'CMAKE_ASM_FLAGS' not in cs:
+        cs = cs.replace('project(', 'set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -fPIC")\nproject(', 1)
+        open(dcm, 'w').write(cs)
+        print('patched Dobby CMakeLists: added CMAKE_ASM_FLAGS -fPIC')
+    else:
+        print('OK: Dobby CMakeLists already sets CMAKE_ASM_FLAGS')
+
 # ---- 3) Diagnostics: report any remaining Mach-O-style @ reloc specifiers ----
 leftover = []
 for f in glob.glob('Dobby/**/*.asm', recursive=True):

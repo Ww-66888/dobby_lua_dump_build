@@ -26,6 +26,7 @@ set_target_properties(dump_lua PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
   PREFIX ""
   OUTPUT_NAME "dump"
+  LINKER_LANGUAGE CXX
 )
 
 install(TARGETS dump_lua
