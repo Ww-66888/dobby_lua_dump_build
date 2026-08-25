@@ -18,6 +18,7 @@ target_link_directories(dump_lua PRIVATE
 )
 target_link_libraries(dump_lua PRIVATE
   dobby
+  c++_static
   log
   dl
 )

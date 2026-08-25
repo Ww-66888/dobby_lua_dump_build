@@ -1,7 +1,0 @@
-[ 50%] Building C object CMakeFiles/dump_lua.dir/src/dump_lua.c.o
-[100%] Linking C shared library lib/dump.so
-ld.lld: error: unable to find library -ldobby
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
-gmake[2]: *** [CMakeFiles/dump_lua.dir/build.make:101: lib/dump.so] Error 1
-gmake[1]: *** [CMakeFiles/Makefile2:87: CMakeFiles/dump_lua.dir/all] Error 2
-gmake: *** [Makefile:136: all] Error 2

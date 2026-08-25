@@ -28,11 +28,15 @@ patched = []
 for f in glob.glob('Dobby/**/*.asm', recursive=True):
     s = open(f, 'r', encoding='utf-8', errors='replace').read()
     orig = s
-    # specific closure-bridge pair -> pseudo ldr =sym (robust, no reloc specifiers)
+    # specific closure-bridge pair -> ELF PIC adrp/:pg_hi21: + add/:lo12:
+    # (page-relative, position-independent; the Mach-O @PAGE/@PAGEOFF pair is
+    #  rejected by the ELF assembler and a bare `ldr =sym` emits a non-PIC
+    #  R_AARCH64_ABS64 relocation that fails to link into a shared library)
     s = re.sub(
         r'adrp\s+TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGE\s*\n'
         r'add\s+TMP_REG_0,\s*TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGEOFF\s*\n',
-        'ldr TMP_REG_0, =common_closure_bridge_handler\n', s)
+        'adrp TMP_REG_0, :pg_hi21:common_closure_bridge_handler\n'
+        'add TMP_REG_0, TMP_REG_0, :lo12:common_closure_bridge_handler\n', s)
     # strip any remaining cdecl() wrappers (in case cpp is not run on .asm)
     s = re.sub(r'cdecl\(([^)]*)\)', r'\1', s)
     # generic fallback for any other Mach-O reloc specifiers in other asm files
