@@ -89,7 +89,8 @@ if os.path.exists(cal):
     extra = (' -Wno-error=implicit-function-declaration -Wno-error=implicit-int '
              '-Wno-error=incompatible-function-pointer-types')
     if anchor in c and '-Wno-error=implicit-function-declaration' not in c:
-        c = c.replace(anchor, anchor + extra)
+        # Insert extra INSIDE the string (before closing ")"), not after it
+        c = c.replace('")', extra + '")', 1)
         open(cal, 'w').write(c)
         print('patched compiler_and_linker.cmake: added clang18 -Wno-error flags')
     else:
