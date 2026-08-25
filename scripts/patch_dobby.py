@@ -35,7 +35,7 @@ for f in glob.glob('Dobby/**/*.asm', recursive=True):
     s = re.sub(
         r'adrp\s+TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGE\s*\n'
         r'add\s+TMP_REG_0,\s*TMP_REG_0,\s*cdecl\(common_closure_bridge_handler\)@PAGEOFF\s*\n',
-        'adrp TMP_REG_0, :pg_hi21:common_closure_bridge_handler\n'
+        'adrp TMP_REG_0, common_closure_bridge_handler\n'
         'add TMP_REG_0, TMP_REG_0, :lo12:common_closure_bridge_handler\n', s)
     # strip any remaining cdecl() wrappers (in case cpp is not run on .asm)
     s = re.sub(r'cdecl\(([^)]*)\)', r'\1', s)
