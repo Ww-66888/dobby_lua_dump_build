@@ -64,18 +64,21 @@ if os.path.exists(cmake_p):
     else:
         print('WARN: dobby_static define block not found; static build may lack trampoline')
 
-# ---- 2b) Fix RuntimeModule field name mismatch (master branch inconsistency) ----
-# Dobby's Linux/ProcessRuntime.cc references module.load_address, but the
-# RuntimeModule struct (source/PlatformUtil/ProcessRuntime.h) defines `void *base`.
-pr = 'Dobby/source/Backend/UserMode/PlatformUtil/Linux/ProcessRuntime.cc'
-if os.path.exists(pr):
-    t = open(pr).read()
-    if 'module.load_address' in t:
-        t = t.replace('module.load_address', 'module.base')
-        open(pr, 'w').write(t)
-        print('patched ProcessRuntime.cc: load_address -> base')
-    else:
-        print('OK: ProcessRuntime.cc already uses base (no load_address)')
+# ---- 2b) Fix RuntimeModule field name drift (master branch) ----
+# Dobby master renamed RuntimeModule::load_address -> base, but several sources
+# (ProcessRuntime.cc, SymbolResolver plugin, ...) still reference load_address.
+# Replace globally so both `.` and `->` accessors are covered.
+for f in glob.glob('Dobby/**/*.cc', recursive=True) + glob.glob('Dobby/**/*.h', recursive=True):
+    try:
+        s = open(f, encoding='utf-8', errors='replace').read()
+    except Exception:
+        continue
+    if 'load_address' in s:
+        s2 = s.replace('load_address', 'base')
+        if s2 != s:
+            open(f, 'w', encoding='utf-8').write(s2)
+            print('patched load_address -> base :', f)
+            patched.append(f)
 
 # ---- 2c) Clang 18 (NDK r27) treats old-style C errors as hard errors ----
 # Downgrade implicit-function-declaration / implicit-int / incompatible-fp to

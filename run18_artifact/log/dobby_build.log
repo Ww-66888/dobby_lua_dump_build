@@ -1,0 +1,51 @@
+[  2%] Building CXX object CMakeFiles/dobby_static.dir/source/core/assembler/assembler-arm.cc.o
+[  4%] Building CXX object CMakeFiles/dobby_static.dir/source/core/assembler/assembler-ia32.cc.o
+[  7%] Building CXX object CMakeFiles/dobby_static.dir/source/core/assembler/assembler-x64.cc.o
+[  9%] Building CXX object CMakeFiles/dobby_static.dir/source/core/codegen/codegen-arm.cc.o
+[ 12%] Building CXX object CMakeFiles/dobby_static.dir/source/core/codegen/codegen-ia32.cc.o
+[ 14%] Building CXX object CMakeFiles/dobby_static.dir/source/InstructionRelocation/arm/InstructionRelocationARM.cc.o
+[ 17%] Building CXX object CMakeFiles/dobby_static.dir/source/InstructionRelocation/arm64/InstructionRelocationARM64.cc.o
+[ 19%] Building CXX object CMakeFiles/dobby_static.dir/source/InstructionRelocation/x86/InstructionRelocationX86.cc.o
+[ 21%] Building CXX object CMakeFiles/dobby_static.dir/source/InstructionRelocation/x86/InstructionRelocationX86Shared.cc.o
+[ 24%] Building CXX object CMakeFiles/dobby_static.dir/source/InstructionRelocation/x64/InstructionRelocationX64.cc.o
+[ 26%] Building C object CMakeFiles/dobby_static.dir/source/InstructionRelocation/x86/x86_insn_decode/x86_insn_decode.c.o
+[ 29%] Building CXX object CMakeFiles/dobby_static.dir/source/InterceptRouting/InstrumentRouting/instrument_routing_handler.cpp.o
+[ 31%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/Trampoline/trampoline_arm.cc.o
+[ 34%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/Trampoline/trampoline_arm64.cc.o
+[ 36%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/Trampoline/trampoline_x86.cc.o
+[ 39%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/Trampoline/trampoline_x64.cc.o
+[ 41%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm/helper_arm.cc.o
+[ 43%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm/closure_bridge_arm.cc.o
+[ 46%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm/ClosureTrampolineARM.cc.o
+[ 48%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm64/helper_arm64.cc.o
+[ 51%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.cc.o
+[ 53%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm64/ClosureTrampolineARM64.cc.o
+[ 56%] Building ASM object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm.o
+[ 58%] Building ASM object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_trampoline_arm64.asm.o
+[ 60%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x86/helper_x86.cc.o
+[ 63%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x86/closure_bridge_x86.cc.o
+[ 65%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x86/ClosureTrampolineX86.cc.o
+[ 68%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x64/helper_x64.cc.o
+[ 70%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x64/closure_bridge_x64.cc.o
+[ 73%] Building CXX object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x64/ClosureTrampolineX64.cc.o
+[ 75%] Building ASM object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x64/closure_bridge_x64.asm.o
+[ 78%] Building ASM object CMakeFiles/dobby_static.dir/source/TrampolineBridge/ClosureTrampolineBridge/x64/closure_trampoline_x64.asm.o
+[ 80%] Building CXX object CMakeFiles/dobby_static.dir/source/dobby.cpp.o
+[ 82%] Building CXX object CMakeFiles/dobby_static.dir/source/Backend/UserMode/PlatformUtil/Linux/ProcessRuntime.cc.o
+/home/runner/work/dobby_lua_dump_build/dobby_lua_dump_build/Dobby/source/Backend/UserMode/PlatformUtil/Linux/ProcessRuntime.cc:14:9: warning: 'LINE_MAX' macro redefined [-Wmacro-redefined]
+   14 | #define LINE_MAX 2048
+      |         ^
+/usr/local/lib/android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/limits.h:140:9: note: previous definition is here
+  140 | #define LINE_MAX _POSIX2_LINE_MAX
+      |         ^
+1 warning generated.
+[ 85%] Building CXX object CMakeFiles/dobby_static.dir/source/Backend/UserMode/UnifiedInterface/platform-posix.cc.o
+[ 87%] Building CXX object CMakeFiles/dobby_static.dir/source/Backend/UserMode/ExecMemory/code-patch-tool-posix.cc.o
+/home/runner/work/dobby_lua_dump_build/dobby_lua_dump_build/Dobby/source/Backend/UserMode/ExecMemory/code-patch-tool-posix.cc:3:10: fatal error: 'core/arch/Cpu.h' file not found
+    3 | #include "core/arch/Cpu.h"
+      |          ^~~~~~~~~~~~~~~~~
+1 error generated.
+gmake[3]: *** [CMakeFiles/dobby_static.dir/build.make:565: CMakeFiles/dobby_static.dir/source/Backend/UserMode/ExecMemory/code-patch-tool-posix.cc.o] Error 1
+gmake[2]: *** [CMakeFiles/Makefile2:190: CMakeFiles/dobby_static.dir/all] Error 2
+gmake[1]: *** [CMakeFiles/Makefile2:197: CMakeFiles/dobby_static.dir/rule] Error 2
+gmake: *** [Makefile:137: dobby_static] Error 2
