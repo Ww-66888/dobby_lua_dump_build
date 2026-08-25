@@ -11,6 +11,7 @@ set(DOBBY_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/Dobby" CACHE PATH "Path to Dobby b
 add_library(dump_lua SHARED src/dump_lua.c)
 target_include_directories(dump_lua PRIVATE
   ${DOBBY_PREFIX}/include
+  ${DOBBY_PREFIX}/source
 )
 target_link_directories(dump_lua PRIVATE
   ${DOBBY_PREFIX}/lib

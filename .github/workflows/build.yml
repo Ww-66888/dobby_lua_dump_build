@@ -24,28 +24,18 @@ jobs:
       - name: Install NDK
         run: |
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --sdk_root=$ANDROID_HOME > /dev/null 2>&1
-          echo "NDK installed"
+          echo "NDK at $ANDROID_HOME/ndk/27.0.12077973"
 
-      - name: Clone Dobby (official + patch asm for NDK)
+      - name: Clone Dobby (official) + patch for NDK
         run: |
           git clone --depth 1 --recursive https://github.com/jmpews/Dobby.git
-          echo "=== Dobby dirs ==="
-          ls Dobby/
-          ls Dobby/external/ 2>/dev/null
-          echo "=== Patching @PAGE/@PAGEOFF in asm files ==="
-          grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
-          echo "=== Patching asm for NDK clang (ldr-based, avoids relocation specifiers) ==="
-          grep -rl "@PAGE\|@PAGEOFF" Dobby/ 2>/dev/null || true
           python3 scripts/patch_dobby.py
-          echo "=== After patch ==="
-          grep -n "adrp\|ldr TMP_REG_0\|cdecl\|@PAGE" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm || true
-          echo "=== After patch ==="
-          grep -n "pg_hi21\|lo12\|@PAGE\|@PAGEOFF" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/*.asm
+          echo "=== verify patched asm ==="
+          grep -n "ldr TMP_REG_0, =common_closure_bridge_handler" Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm || echo "PATCH-NOT-APPLIED"
 
       - name: Build Dobby static lib
         run: |
-          cmake -B dobby-build \
-            -S Dobby \
+          cmake -B dobby-build -S Dobby \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
@@ -53,17 +43,19 @@ jobs:
             > dobby_config.log 2>&1 || true
           echo "=== dobby config tail ==="
           tail -30 dobby_config.log
-          cmake --build dobby-build --config Release > dobby_build.log 2>&1 || true
+          cmake --build dobby-build --config Release --target dobby_static > dobby_build.log 2>&1 || true
           echo "=== dobby build tail ==="
-          tail -40 dobby_build.log
-          echo "=== dobby artifacts ==="
-          find dobby-build -name "*.a" -o -name "*.so" 2>/dev/null | head
+          tail -50 dobby_build.log
+          echo "=== dobby static artifacts ==="
+          find dobby-build -name "libdobby*.a" -o -name "libdobby*.so" | head
 
       - name: Prepare Dobby lib
         run: |
           mkdir -p Dobby/lib
-          find dobby-build -name "libdobby.a" -exec cp {} Dobby/lib/ \;
-          ls -la Dobby/lib/
+          A=$(find dobby-build -name "libdobby.a" | head -1)
+          [ -z "$A" ] && A=$(find dobby-build -name "libdobby_static.a" | head -1)
+          if [ -n "$A" ]; then cp "$A" Dobby/lib/libdobby.a && echo "copied $A"; else echo "NO dobby static lib produced"; fi
+          ls -la Dobby/lib/ || true
 
       - name: Configure our lib
         run: |
@@ -80,15 +72,15 @@ jobs:
         run: |
           cmake --build build --config Release > our_build.log 2>&1 || true
           echo "=== our build tail ==="
-          tail -40 our_build.log
+          tail -50 our_build.log
           echo "=== outputs ==="
-          find build -name "libdump*" 2>/dev/null | head
+          find build -name "libdump*.so" | head
 
       - name: Package (always)
         if: always()
         run: |
           mkdir -p output/lib/arm64-v8a output/log
-          SO=$(find build -name "libdump.so" 2>/dev/null | head -1)
+          SO=$(find build -name "libdump.so" | head -1)
           if [ -n "$SO" ]; then
             cp "$SO" output/lib/arm64-v8a/
             echo "Copied: $SO"
@@ -98,11 +90,8 @@ jobs:
           for f in dobby_config.log dobby_build.log our_config.log our_build.log; do
             [ -f "$f" ] && cp "$f" output/log/ || true
           done
-          # Emit key log tails as annotations for API inspection
-          echo "::error title=DOBBY_CONFIG::$(tail -5 dobby_config.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
-          echo "::error title=DOBBY_BUILD::$(tail -8 dobby_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
-          echo "::error title=OUR_CONFIG::$(tail -5 our_config.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
-          echo "::error title=OUR_BUILD::$(tail -8 our_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-500)"
+          echo "::error title=DOBBY_BUILD::$(tail -12 dobby_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-800)"
+          echo "::error title=OUR_BUILD::$(tail -15 our_build.log 2>/dev/null | tr '\n' ' ' | cut -c1-800)"
           echo "::error title=OUTPUTS::$(find build -name 'libdump*' 2>/dev/null | tr '\n' ' ')"
 
       - name: Upload Artifact
