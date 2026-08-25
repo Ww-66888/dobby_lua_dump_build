@@ -150,5 +150,8 @@ jobs:
           open("/tmp/DIAG.md","w").write("\n".join(out))
           print("DIAG written, bytes:", len("\n".join(out)))
           PY
-          gh issue create --title "CI diag run ${{ github.run_number }}" --body-file /tmp/DIAG.md || echo "GH_ISSUE_FAIL"
+          cp /tmp/DIAG.md DIAG.md
+          git add DIAG.md
+          git -c user.email=ci@local -c user.name=ci commit -m "diag run ${{ github.run_number }} [skip ci]" || echo "commit failed"
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Ww-66888/dobby_lua_dump_build.git HEAD:refs/heads/ci-logs 2>&1 | tail -8 || echo "PUSH_FAIL"
           echo "publish step done"
