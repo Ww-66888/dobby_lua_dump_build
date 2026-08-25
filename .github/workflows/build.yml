@@ -2,6 +2,7 @@ name: Build Dobby Lua Dump
 
 permissions:
   contents: write
+  issues: write
 
 on:
   push:
@@ -113,8 +114,10 @@ jobs:
           name: libdump-arm64
           path: output/
 
-      - name: Publish diagnostics to ci-logs branch
+      - name: Publish diagnostics to issue
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PY'
           import os, subprocess
@@ -147,10 +150,20 @@ jobs:
           open("/tmp/DIAG.md","w").write("\n".join(out))
           print("DIAG written, bytes:", len("\n".join(out)))
           PY
-          git branch -D ci-logs 2>/dev/null || true
-          git switch --orphan ci-logs
-          cp /tmp/DIAG.md DIAG.md
-          git add DIAG.md
-          git -c user.email=ci@local -c user.name=ci commit -m "diag run ${{ github.run_number }}" || echo "commit failed"
-          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Ww-66888/dobby_lua_dump_build.git ci-logs 2>&1 | tail -5 || echo "PUSH_FAILED"
+          python3 - <<'PY2'
+          import json, os, urllib.request, ssl
+          tok = os.environ.get("GH_TOKEN","")
+          diag = open("/tmp/DIAG.md").read()
+          payload = json.dumps({"title": "CI diag run %s" % os.environ.get('GITHUB_RUN_NUMBER','?'), "body": diag}).encode()
+          req = urllib.request.Request(
+            "https://api.github.com/repos/Ww-66888/dobby_lua_dump_build/issues",
+            data=payload,
+            headers={"Authorization": "Bearer %s" % tok, "Accept":"application/vnd.github+json", "Content-Type":"application/json", "User-Agent":"wb"},
+            method="POST")
+          try:
+            resp = urllib.request.urlopen(req, timeout=60).read()
+            print("ISSUE_CREATED", json.loads(resp).get("html_url"))
+          except Exception as e:
+            print("ISSUE_FAIL", repr(e))
+          PY2
           echo "publish step done"
