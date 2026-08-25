@@ -64,6 +64,37 @@ if os.path.exists(cmake_p):
     else:
         print('WARN: dobby_static define block not found; static build may lack trampoline')
 
+# ---- 2b) Fix RuntimeModule field name mismatch (master branch inconsistency) ----
+# Dobby's Linux/ProcessRuntime.cc references module.load_address, but the
+# RuntimeModule struct (source/PlatformUtil/ProcessRuntime.h) defines `void *base`.
+pr = 'Dobby/source/Backend/UserMode/PlatformUtil/Linux/ProcessRuntime.cc'
+if os.path.exists(pr):
+    t = open(pr).read()
+    if 'module.load_address' in t:
+        t = t.replace('module.load_address', 'module.base')
+        open(pr, 'w').write(t)
+        print('patched ProcessRuntime.cc: load_address -> base')
+    else:
+        print('OK: ProcessRuntime.cc already uses base (no load_address)')
+
+# ---- 2c) Clang 18 (NDK r27) treats old-style C errors as hard errors ----
+# Downgrade implicit-function-declaration / implicit-int / incompatible-fp to
+# warnings so Dobby's legacy C sources still compile.
+cal = 'Dobby/cmake/compiler_and_linker.cmake'
+if os.path.exists(cal):
+    c = open(cal).read()
+    anchor = ('set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC '
+              '-fno-stack-check -fno-stack-protector -fno-exceptions -fno-rtti '
+              '-fno-common -fno-zero-initialized-in-bss")')
+    extra = (' -Wno-error=implicit-function-declaration -Wno-error=implicit-int '
+             '-Wno-error=incompatible-function-pointer-types')
+    if anchor in c and '-Wno-error=implicit-function-declaration' not in c:
+        c = c.replace(anchor, anchor + extra)
+        open(cal, 'w').write(c)
+        print('patched compiler_and_linker.cmake: added clang18 -Wno-error flags')
+    else:
+        print('OK: compiler_and_linker.cmake already has clang18 flags / anchor not found')
+
 # ---- 3) Diagnostics: report any remaining Mach-O-style @ reloc specifiers ----
 leftover = []
 for f in glob.glob('Dobby/**/*.asm', recursive=True):
